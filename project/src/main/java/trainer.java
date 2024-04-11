@@ -121,13 +121,13 @@ public class trainer {
 
             while(resultSet.next())
             {
+                int memberID = resultSet.getInt("memberID");
                 String firstName = resultSet.getString("fName");
                 String lastName = resultSet.getString("lName");
                 String sex = resultSet.getString("sex");
                 String email = resultSet.getString("email");
                 String birthday = resultSet.getString("birthday");
                 String fitnessGoal = resultSet.getString("fitnessGoal");
-                String fitnessAchievement = resultSet.getString("fitnessAchievement");
                 String weight = resultSet.getString("weight");
                 String height = resultSet.getString("height");
 
@@ -141,7 +141,19 @@ public class trainer {
                 System.out.printf(format, "Weight:", weight);
                 System.out.printf(format, "Height:", height);
                 System.out.printf(format, "Fitness Goal:", fitnessGoal);
-                System.out.printf(format, "Fitness Achievement:", fitnessAchievement);
+                System.out.println("Fitness Achievements:");
+
+                sql = "SELECT * FROM fitnessAchievement WHERE memberID =?";
+                statement = conn.prepareStatement(sql);
+                statement.setInt(1, memberID);
+
+                resultSet = statement.executeQuery();
+
+                while (resultSet.next())
+                {
+                    String fitnessAchievement = resultSet.getString("achievement");
+                    System.out.println("- " + fitnessAchievement);
+                }
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);

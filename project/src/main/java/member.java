@@ -142,7 +142,16 @@ public class member {
     {
         try
         {
-            PreparedStatement statement = conn.prepareStatement("SELECT * FROM Routine WHERE memberid =?");
+            PreparedStatement statement = conn.prepareStatement("SELECT \n" +
+                            "    HasRoutine.memberID,\n" +
+                            "    Routine.routineName,\n" +
+                            "    Routine.description\n" +
+                            "FROM \n" +
+                            "    HasRoutine\n" +
+                            "JOIN \n" +
+                            "    Routine ON HasRoutine.routineID = Routine.routineID\n" +
+                            "WHERE\n" +
+                            "\tmemberID =?");
             statement.setInt(1, id);
             ResultSet resultSet = statement.executeQuery();
 
@@ -170,7 +179,7 @@ public class member {
     {
         try
         {
-            PreparedStatement statement = conn.prepareStatement("SELECT * FROM Member WHERE memberid =?");
+            PreparedStatement statement = conn.prepareStatement("SELECT * FROM fitnessAchievement WHERE memberid =?");
             statement.setInt(1, id);
             ResultSet resultSet = statement.executeQuery();
 
@@ -178,7 +187,7 @@ public class member {
 
             while(resultSet.next())
             {
-                System.out.println("- " + resultSet.getString("fitnessAchievement"));
+                System.out.println("- " + resultSet.getString("achievement"));
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -249,14 +258,36 @@ public class member {
         java.sql.Time sqlStartTime = new java.sql.Time(parsedUtilStartTime.getTime());
         java.sql.Time sqlEndTime = new java.sql.Time(parsedUtilEndTime.getTime());
 
+        String sql = "SELECT COUNT(*) AS rowcount FROM Availability WHERE date =? AND startTime <=?  AND endTime >=?";
+        PreparedStatement statement = null;
+        try {
+            statement = conn.prepareStatement(sql);
+            statement.setDate(1, sqlDate);
+            statement.setTime(2, sqlStartTime);
+            statement.setTime(3, sqlEndTime);
+            ResultSet resultSet = statement.executeQuery();
+
+            if (resultSet.next())
+            {
+                int count = resultSet.getInt("rowcount");
+                if (count == 0)
+                {
+                    System.out.println("There are currently no trainers available");
+                    return;
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
         System.out.print("Enter available trainer ID: ");
         admin.printAvailableTrainers(conn, sqlDate, sqlStartTime, sqlEndTime);
         trainerID = Integer.parseInt(myObj.nextLine());
 
-        String sql = "INSERT INTO TrainingSessions (trainerID, sessionName, type, date, startTime, endTime) VALUES" +
+        sql = "INSERT INTO TrainingSessions (trainerID, sessionName, type, date, startTime, endTime) VALUES" +
                 "(?, ?, ?, ?, ?, ?)";
         try {
-            PreparedStatement statement = conn.prepareStatement(sql);
+            statement = conn.prepareStatement(sql);
             statement.setInt(1, trainerID);
             statement.setString(2, sessionName);
             statement.setString(3, type);
@@ -330,36 +361,8 @@ public class member {
                 }
             }
 
-            sql = "SELECT * FROM TrainingSessions WHERE NOT type ='Private Sessions' ";
-            statement = conn.prepareStatement(sql);
-            resultSet = statement.executeQuery();
+            printSessions(conn);
 
-            String headerFormat = "%-20s %-20s %-20s %-20s %-20s %-20s %-20s %n";
-            String rowFormat = "%-20s %-20s %-20s %-20s %-20s %-20s %-20s %n";
-
-            System.out.println("Active Group Sessions: ");
-            System.out.printf(headerFormat, "Session ID", "Trainer ID", "Session Name", "Session Type", "Date", "Start Time", "End Time");
-
-            while(resultSet.next())
-            {
-                String sessionID = resultSet.getString("sessionID");
-                String trainerID = resultSet.getString("trainerID");
-                String sessionName = resultSet.getString("sessionName");
-                String type = resultSet.getString("type");
-                String date = resultSet.getString("date");
-                String startTime = resultSet.getString("startTime");
-                String endTime = resultSet.getString("endTime");
-
-                sessionID = sessionID.length() > 20 ? sessionID.substring(0, 10) + "..." : sessionID;
-                trainerID = trainerID.length() > 20 ? trainerID.substring(0, 10) + "..." : trainerID;
-                sessionName = sessionName.length() > 20 ? sessionName.substring(0, 15) + "..." : sessionName;
-                type = type.length() > 20 ? type.substring(0, 15) + "..." : type;
-                date = date.length() > 20 ? date.substring(0, 15) + "..." : date;
-                startTime = startTime.length() > 20 ? startTime.substring(0, 15) + "..." : startTime;
-                endTime = endTime.length() > 20 ? endTime.substring(0, 15) + "..." : endTime;
-
-                System.out.printf(rowFormat, sessionID, trainerID, sessionName, type, date, startTime, endTime);
-            }
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -382,5 +385,45 @@ public class member {
             throw new RuntimeException(e);
         }
 
+    }
+
+    private static void printSessions(Connection conn)
+    {
+        try {
+            String sql = "SELECT * FROM Trainer " +
+                    "INNER JOIN TrainingSessions ON Trainer.trainerID = TrainingSessions.trainerID " +
+                    "WHERE NOT type ='Private Sessions' ";
+            PreparedStatement statement = conn.prepareStatement(sql);
+            ResultSet resultSet = statement.executeQuery();
+
+            String headerFormat = "%-20s %-20s %-20s %-20s %-20s %-20s %-20s %n";
+            String rowFormat = "%-20s %-20s %-20s %-20s %-20s %-20s %-20s %n";
+
+            System.out.println("Active Group Sessions: ");
+            System.out.printf(headerFormat, "Session ID", "Trainer Name", "Session Name", "Session Type", "Date", "Start Time", "End Time");
+
+            while(resultSet.next())
+            {
+                String sessionID = resultSet.getString("sessionID");
+                String trainerName = resultSet.getString("fName") + " " + resultSet.getString("lName");
+                String sessionName = resultSet.getString("sessionName");
+                String type = resultSet.getString("type");
+                String date = resultSet.getString("date");
+                String startTime = resultSet.getString("startTime");
+                String endTime = resultSet.getString("endTime");
+
+                sessionID = sessionID.length() > 20 ? sessionID.substring(0, 10) + "..." : sessionID;
+                trainerName = trainerName.length() > 20 ? trainerName.substring(0, 10) + "..." : trainerName;
+                sessionName = sessionName.length() > 20 ? sessionName.substring(0, 15) + "..." : sessionName;
+                type = type.length() > 20 ? type.substring(0, 15) + "..." : type;
+                date = date.length() > 20 ? date.substring(0, 15) + "..." : date;
+                startTime = startTime.length() > 20 ? startTime.substring(0, 15) + "..." : startTime;
+                endTime = endTime.length() > 20 ? endTime.substring(0, 15) + "..." : endTime;
+
+                System.out.printf(rowFormat, sessionID, trainerName, sessionName, type, date, startTime, endTime);
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

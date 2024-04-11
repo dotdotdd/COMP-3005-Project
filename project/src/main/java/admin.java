@@ -17,27 +17,30 @@ public class admin {
                 System.out.println("Admin Menu:");
                 System.out.println("(1) Book Room");
                 System.out.println("(2) Remove Room Booking");
-                System.out.println("(3) Equipment Maintenance Monitoring");
-                System.out.println("(4) Class Schedule Updating");
-                System.out.println("(5) Process Payment");
-                System.out.println("(6) View All Payments");
-                System.out.println("(7) Logout");
+                System.out.println("(3) View Room Booking");
+                System.out.println("(4) Equipment Maintenance Monitoring");
+                System.out.println("(5) Class Schedule Updating");
+                System.out.println("(6) Process Payment");
+                System.out.println("(7) View All Payments");
+                System.out.println("(8) Logout");
 
                 input = myObj.nextInt();
 
                 if (input == 1) {
-                    roomBooking(conn);
+                    roomBooking(conn, id);
                 } else if (input == 2) {
                     removeRoomBooking(conn);
                 } else if (input == 3) {
-                    maintanenceViewing(conn);
+                    printRoomBooking(conn);
                 } else if (input == 4) {
-                    classSchedulingMenu(conn);
+                    maintanenceViewing(conn);
                 } else if (input == 5) {
-                    billing(conn);
+                    classSchedulingMenu(conn);
                 } else if (input == 6) {
+                    billing(conn, id);
+                } else if (input == 7) {
                     viewPayments(conn);
-                }else if (input == 7) {
+                }else if (input == 8) {
                     main.menu(conn);
                     break;
                 } else {
@@ -50,7 +53,7 @@ public class admin {
         }
     }
 
-    private static void roomBooking(Connection conn)
+    private static void roomBooking(Connection conn, int id)
     {
         int roomID;
         String date;
@@ -60,6 +63,9 @@ public class admin {
         Scanner myObj = new Scanner(System.in);
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
         SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm");
+
+        System.out.println("Currently booked rooms");
+        printRoomBooking(conn);
 
         System.out.println("Which room would you like to book? Please enter the room ID");
         printRooms(conn);
@@ -88,14 +94,15 @@ public class admin {
         java.sql.Time sqlStartTime = new java.sql.Time(parsedUtilStartTime.getTime());
         java.sql.Time sqlEndTime = new java.sql.Time(parsedUtilEndTime.getTime());
 
-        String sql = "INSERT INTO RoomBooking (roomID, date, startTime, endTime) VALUES" +
-                "(?, ?, ?, ?)";
+        String sql = "INSERT INTO RoomBooking (roomID, adminID, date, startTime, endTime) VALUES" +
+                "(?, ?, ?, ?, ?)";
         try {
             PreparedStatement statement = conn.prepareStatement(sql);
             statement.setInt(1, roomID);
-            statement.setDate(2, sqlDate);
-            statement.setTime(3, sqlStartTime);
-            statement.setTime(4, sqlEndTime);
+            statement.setInt(2, id);
+            statement.setDate(3, sqlDate);
+            statement.setTime(4, sqlStartTime);
+            statement.setTime(5, sqlEndTime);
 
             int rowsInserted = statement.executeUpdate();
             if (rowsInserted > 0) {
@@ -240,7 +247,7 @@ public class admin {
         }
     }
 
-    private static void billing(Connection conn)
+    private static void billing(Connection conn, int id)
     {
         int memberID;
         int amount;
@@ -266,13 +273,14 @@ public class admin {
         }
         java.sql.Date sqlDate = new java.sql.Date(parsedUtilDate.getTime());
 
-        String sql = "INSERT INTO Billing (memberID, amount, date) VALUES" +
-                "(?, ?, ?)";
+        String sql = "INSERT INTO Billing (memberID, adminID, amount, date) VALUES" +
+                "(?, ?, ?, ?)";
         try {
             PreparedStatement statement = conn.prepareStatement(sql);
             statement.setInt(1, memberID);
-            statement.setInt(2, amount);
-            statement.setDate(3, sqlDate);
+            statement.setInt(2, id);
+            statement.setInt(3, amount);
+            statement.setDate(4, sqlDate);
 
             int rowsInserted = statement.executeUpdate();
             if (rowsInserted > 0) {
@@ -292,25 +300,27 @@ public class admin {
             PreparedStatement statement = conn.prepareStatement("SELECT * FROM Billing");
             ResultSet resultSet = statement.executeQuery();
 
-            String headerFormat = "%-20s %-20s %-20s %-20s %n";
-            String rowFormat = "%-20s %-20s %-20s %-20s %n";
+            String headerFormat = "%-20s %-20s %-20s %-20s %-20s %n";
+            String rowFormat = "%-20s %-20s %-20s %-20s %-20s %n";
 
             System.out.println("Billing History: ");
-            System.out.printf(headerFormat, "Billing ID", "Member ID", "Amount", "Date");
+            System.out.printf(headerFormat, "Billing ID", "Member ID", "Admin ID", "Amount", "Date");
 
             while(resultSet.next())
             {
                 String billingID = resultSet.getString("billingID");
                 String memberID = resultSet.getString("memberID");
+                String adminID = resultSet.getString("adminID");
                 String amount = resultSet.getString("amount");
                 String date = resultSet.getString("date");
 
                 billingID = billingID.length() > 20 ? billingID.substring(0, 10) + "..." : billingID;
                 memberID = memberID.length() > 20 ? memberID.substring(0, 10) + "..." : memberID;
+                adminID = adminID.length() > 20 ? adminID.substring(0, 10) + "..." : adminID;
                 amount = amount.length() > 20 ? amount.substring(0, 15) + "..." : amount;
                 date = amount.length() > 20 ? date.substring(0, 15) + "..." : date;
 
-                System.out.printf(rowFormat, billingID, memberID, amount, date);
+                System.out.printf(rowFormat, billingID, memberID, adminID, amount, date);
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -534,11 +544,19 @@ public class admin {
                 trainer.addTrainerAvailability(conn, date, startTime, endTime, trainerID);
             }
 
+            sql = "DELETE FROM SessionParticipants WHERE sessionID = ?";
+            statement = conn.prepareStatement(sql);
+            statement.setInt(1, sessionID);
+            int rowsRemoved = statement.executeUpdate();
+            if (rowsRemoved > 0) {
+                statement.close();
+            }
+
             sql = "DELETE FROM TrainingSessions WHERE sessionID =?";
             statement = conn.prepareStatement(sql);
             statement.setInt(1, sessionID);
-            int rowsInserted = statement.executeUpdate();
-            if (rowsInserted > 0) {
+            rowsRemoved = statement.executeUpdate();
+            if (rowsRemoved > 0) {
                 statement.close();
                 System.out.println("Remove session with id:" + sessionID + " was successfully!");
             }
@@ -548,23 +566,24 @@ public class admin {
 
     }
 
-    private static void printSessions(Connection conn)
+    public static void printSessions(Connection conn)
     {
         try {
-            String sql = "SELECT * FROM TrainingSessions";
+            String sql = "SELECT * FROM Trainer " +
+                    "INNER JOIN TrainingSessions ON Trainer.trainerID = TrainingSessions.trainerID ";
             PreparedStatement statement = conn.prepareStatement(sql);
             ResultSet resultSet = statement.executeQuery();
 
             String headerFormat = "%-20s %-20s %-20s %-20s %-20s %-20s %-20s %n";
             String rowFormat = "%-20s %-20s %-20s %-20s %-20s %-20s %-20s %n";
 
-            System.out.println("Active Sessions: ");
-            System.out.printf(headerFormat, "Session ID", "Trainer ID", "Session Name", "Session Type", "Date", "Start Time", "End Time");
+            System.out.println("Active Group Sessions: ");
+            System.out.printf(headerFormat, "Session ID", "Trainer Name", "Session Name", "Session Type", "Date", "Start Time", "End Time");
 
             while(resultSet.next())
             {
                 String sessionID = resultSet.getString("sessionID");
-                String trainerID = resultSet.getString("trainerID");
+                String trainerName = resultSet.getString("fName") + " " + resultSet.getString("lName");
                 String sessionName = resultSet.getString("sessionName");
                 String type = resultSet.getString("type");
                 String date = resultSet.getString("date");
@@ -572,14 +591,14 @@ public class admin {
                 String endTime = resultSet.getString("endTime");
 
                 sessionID = sessionID.length() > 20 ? sessionID.substring(0, 10) + "..." : sessionID;
-                trainerID = trainerID.length() > 20 ? trainerID.substring(0, 10) + "..." : trainerID;
+                trainerName = trainerName.length() > 20 ? trainerName.substring(0, 10) + "..." : trainerName;
                 sessionName = sessionName.length() > 20 ? sessionName.substring(0, 15) + "..." : sessionName;
                 type = type.length() > 20 ? type.substring(0, 15) + "..." : type;
                 date = date.length() > 20 ? date.substring(0, 15) + "..." : date;
                 startTime = startTime.length() > 20 ? startTime.substring(0, 15) + "..." : startTime;
                 endTime = endTime.length() > 20 ? endTime.substring(0, 15) + "..." : endTime;
 
-                System.out.printf(rowFormat, sessionID, trainerID, sessionName, type, date, startTime, endTime);
+                System.out.printf(rowFormat, sessionID, trainerName, sessionName, type, date, startTime, endTime);
             }
         } catch (SQLException e) {
             throw new RuntimeException(e);

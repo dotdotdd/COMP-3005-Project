@@ -107,8 +107,8 @@ public class main
 
         try
         {
-            String sql = "INSERT INTO Member (fName, lName, email, username, password, sex, birthday, weight, height, fitnessGoal, fitnessAchievement) VALUES" +
-                    "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            String sql = "INSERT INTO Member (fName, lName, email, username, password, sex, birthday, weight, height, fitnessGoal) VALUES" +
+                    "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             PreparedStatement statement = conn.prepareStatement(sql);
             statement.setString(1, fName);
             statement.setString(2, lName);
@@ -120,12 +120,10 @@ public class main
             statement.setInt(8, weight);
             statement.setInt(9, height);
             statement.setString(10, fitnessGoal);
-            statement.setString(11, fitnessAchievement);
 
             int rowsInserted = statement.executeUpdate();
 
             if (rowsInserted > 0) {
-
                 sql = "SELECT * FROM Member WHERE username = ? AND password = ?";
                 statement = conn.prepareStatement(sql);
                 statement.setString(1, username);
@@ -134,7 +132,18 @@ public class main
                 ResultSet result = statement.executeQuery();
 
                 if (result.next()) {
-                    member.menu(conn, result);
+
+                    sql = "INSERT INTO fitnessAchievement (memberID, achievement) VALUES" +
+                            "(?, ?)";
+                    statement = conn.prepareStatement(sql);
+                    statement.setInt(1, result.getInt("memberID"));
+                    statement.setString(2, fitnessAchievement);
+
+                    rowsInserted = statement.executeUpdate();
+
+                    if (rowsInserted > 0) {
+                        member.menu(conn, result);
+                    }
                 }
             }
 

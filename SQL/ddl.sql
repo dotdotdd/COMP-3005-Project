@@ -9,18 +9,31 @@ CREATE TABLE Member (
 	birthday	DATE		NOT NULL,
 	weight		INT		NOT NULL,
 	height		INT		NOT NULL,
-	fitnessGoal	VARCHAR(500),
-	fitnessAchievement VARCHAR(500)
+	fitnessGoal	VARCHAR(500)
 );
 
+
+CREATE TABLE fitnessAchievement (
+	memberID	INT NOT NULL,		
+	achievement VARCHAR(500), 
+	FOREIGN KEY (memberID)
+		REFERENCES Member (memberID)
+);
 
 CREATE TABLE Routine (
 	routineID	SERIAL		PRIMARY KEY,
 	routineName	VARCHAR(255)	NOT NULL,
-	memberID	INT,
-	description 	VARCHAR(500),
+	description 	VARCHAR(500)
+);
+
+
+CREATE TABLE HasRoutine (
+	memberID	INT 	NOT NULL,		
+	routineID	INT		NOT NULL, 
 	FOREIGN KEY (memberID)
-		REFERENCES Member (memberID)
+		REFERENCES Member (memberID),
+	FOREIGN KEY (routineID)
+		REFERENCES Routine (routineID)
 );
 
 
@@ -50,7 +63,7 @@ CREATE TABLE TrainingSessions (
 
 CREATE TABLE SessionParticipants (
 	sessionID	INT	NOT NULL,
-	memberID	INT,
+	memberID	INT NOT NULL,
 	FOREIGN KEY (sessionID)
 		REFERENCES TrainingSessions (sessionID),
 	FOREIGN KEY (memberID)
@@ -95,19 +108,26 @@ CREATE TABLE Rooms (
 CREATE TABLE RoomBooking (
 	bookingID	SERIAL	PRIMARY KEY,
 	roomID		INT	NOT NULL,
+	adminID		INT 	NOT NULL,
 	date		DATE	NOT NULL,
 	startTime	TIME	NOT NULL,
 	endTime		TIME	NOT NULL,
 	FOREIGN KEY (roomID)
-		REFERENCES Rooms (roomID)
+		REFERENCES Rooms (roomID),
+	FOREIGN KEY (adminID)
+		REFERENCES Admin (adminID)
 );
 
 
 CREATE TABLE Billing (
 	billingID	SERIAL	PRIMARY KEY,
 	memberID	INT	NOT NULL,
-	amount		INT 	NOT NULL,
+	adminID  	INT 	NOT NULL,
+	amount		FLOAT 	NOT NULL,
 	date		DATE	NOT NULL,
 	FOREIGN KEY (memberID)
-		REFERENCES Member (memberID)
+		REFERENCES Member (memberID),
+	FOREIGN KEY (adminID)
+		REFERENCES Admin (adminID)
+		
 );
